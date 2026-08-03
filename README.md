@@ -1,6 +1,6 @@
-# Bulk Job-Application Mailer
+# HireNow
 
-A local Next.js app for sending personalized job-application emails from a CSV list of HR contacts. It uses Gmail SMTP, a resume PDF attachment, Prisma, and PostgreSQL. Sending runs in a local background loop with a daily safety cap and randomized delays.
+A local Next.js app for sending personalized hiring outreach emails from saved Excel/CSV HR contacts. It uses Gmail SMTP, a resume PDF attachment, Prisma, and PostgreSQL. Sending runs in a local background loop with a daily safety cap and randomized delays.
 
 ## Requirements
 

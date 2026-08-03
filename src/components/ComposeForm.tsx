@@ -69,7 +69,7 @@ function contactsToCsvResult(contacts: SavedContact[]): CsvUploadResult {
 export function ComposeForm() {
   const router = useRouter();
   const [draft, setDraft] = useState<CampaignDraft>({});
-  const [campaignName, setCampaignName] = useState("Job Application Campaign");
+  const [campaignName, setCampaignName] = useState("HireNow Campaign");
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
   const [contact, setContact] = useState<ContactDetails>({
