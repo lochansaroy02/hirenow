@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecipientStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Campaign {
+  id            String         @id @default(uuid())
+  name          String         @default("Untitled Campaign")
+  subject       String
+  body          String
+  resumePath    String
+  dailyLimit    Int            @default(500)
+  safetyPercent Int            @default(80)
+  delayMinSec   Int            @default(8)
+  delayMaxSec   Int            @default(20)
+  status        String         @default("DRAFT") // DRAFT | ACTIVE | PAUSED | COMPLETED
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  recipients    Recipient[]
+  sendLogs      DailySendLog[]
+}
+
+model Recipient {
+  id           String          @id @default(uuid())
+  campaignId   String
+  campaign     Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name         String
+  companyName  String
+  hrEmail      String
+  hrName       String
+  emailSent    Boolean         @default(false)
+  status       RecipientStatus @default(PENDING)
+  attempts     Int             @default(0)
+  lastError    String?
+  sentAt       DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@index([campaignId, status])
+  @@index([campaignId, emailSent])
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  name        String
+  companyName String
+  hrEmail     String   @unique
+  hrName      String
+  sourceFile  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyName])
+}
+
+model DailySendLog {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  date       String   // YYYY-MM-DD
+  countSent  Int      @default(0)
+
+  @@unique([campaignId, date])
+}
