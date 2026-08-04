@@ -158,9 +158,15 @@ export function DashboardClient({ campaignId }: DashboardClientProps) {
     <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-6 flex flex-col gap-3 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Link className="text-sm font-medium text-teal-700 hover:text-teal-900" href="/">
-            New campaign
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link className="text-sm font-medium text-teal-700 hover:text-teal-900" href="/">
+              New campaign
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link className="text-sm font-medium text-teal-700 hover:text-teal-900" href="/dashboard">
+              All mails
+            </Link>
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-semibold text-slate-950">{status?.campaign.name ?? "Campaign"}</h1>
             {status ? (
@@ -169,7 +175,7 @@ export function DashboardClient({ campaignId }: DashboardClientProps) {
               </span>
             ) : null}
           </div>
-          <p className="mt-1 break-words text-slate-600">{status?.campaign.subject ?? campaignId}</p>
+          <p className="mt-1 wrap-break-word text-slate-600">{status?.campaign.subject ?? campaignId}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button

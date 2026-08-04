@@ -52,7 +52,7 @@ export function ResumeUploader({ value, onUploaded }: ResumeUploaderProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">2. Upload resume</h2>
-          <p className="mt-1 text-sm text-slate-600">PDF only, up to 5MB.</p>
+          <p className="mt-1 text-sm text-slate-600">PDF only, up to 5MB. Stored in ImageKit and attached to every email.</p>
         </div>
         <button
           type="button"
@@ -81,6 +81,25 @@ export function ResumeUploader({ value, onUploaded }: ResumeUploaderProps) {
           <p className="mt-1 text-emerald-800">{formatBytes(value.size)}</p>
           {value.attachmentFilename ? (
             <p className="mt-2 text-emerald-800">Email attachment name: {value.attachmentFilename}</p>
+          ) : null}
+          <p className="mt-2 text-emerald-800">
+            Stored in {value.storage === "local" ? "this machine" : "ImageKit"}
+            {value.resumePath.startsWith("http") ? (
+              <>
+                {" — "}
+                <a
+                  className="font-medium underline underline-offset-2 hover:text-emerald-950"
+                  href={value.resumePath}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  open file
+                </a>
+              </>
+            ) : null}
+          </p>
+          {value.storageWarning ? (
+            <p className="mt-2 rounded-md bg-amber-50 p-2 text-amber-800">{value.storageWarning}</p>
           ) : null}
           {value.suggestedRole ? (
             <p className="mt-2 font-semibold">Detected role: {value.suggestedRole}</p>

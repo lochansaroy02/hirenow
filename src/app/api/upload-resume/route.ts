@@ -2,11 +2,20 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { isImageKitConfigured, uploadResumeToImageKit } from "@/lib/imagekit";
 import { analyzeResumePdf, slugifyResumeRole } from "@/lib/resumeAnalyzer";
 
 export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+async function saveToLocalDisk(bytes: Buffer, attachmentFilename: string) {
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "resumes", uuidv4());
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(path.join(uploadDir, attachmentFilename), bytes);
+
+  return `/uploads/resumes/${path.basename(uploadDir)}/${attachmentFilename}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -40,15 +49,30 @@ export async function POST(request: Request) {
       parseWarning = "Resume uploaded, but the PDF text could not be extracted. The file name and template will use Full Stack Developer.";
     }
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "resumes", uuidv4());
-    await mkdir(uploadDir, { recursive: true });
-
     const attachmentFilename = `${slugifyResumeRole(suggestedRole)}-resume.pdf`;
-    const absolutePath = path.join(uploadDir, attachmentFilename);
-    await writeFile(absolutePath, bytes);
+    let resumePath: string;
+    let fileId: string | null = null;
+    let storage: "imagekit" | "local";
+
+    if (isImageKitConfigured()) {
+      // A failed ImageKit upload is surfaced instead of silently falling back to
+      // disk, so a broken key never looks like a successful upload.
+      const uploaded = await uploadResumeToImageKit(bytes, attachmentFilename);
+      resumePath = uploaded.url;
+      fileId = uploaded.fileId;
+      storage = "imagekit";
+    } else {
+      resumePath = await saveToLocalDisk(bytes, attachmentFilename);
+      storage = "local";
+    }
 
     return NextResponse.json({
-      resumePath: `/uploads/resumes/${path.basename(uploadDir)}/${attachmentFilename}`,
+      resumePath,
+      storage,
+      fileId,
+      storageWarning: storage === "local"
+        ? "Saved to this machine because IMAGEKIT_PRIVATE_KEY is not set. Add it to .env to store resumes in ImageKit."
+        : undefined,
       filename: file.name,
       attachmentFilename,
       size: file.size,
@@ -57,7 +81,8 @@ export async function POST(request: Request) {
       extractedText,
       parseWarning,
     });
-  } catch {
-    return NextResponse.json({ error: "Resume upload failed." }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return NextResponse.json({ error: message || "Resume upload failed." }, { status: 500 });
   }
 }

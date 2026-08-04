@@ -36,6 +36,9 @@ export type ResumeUploadResult = {
   resumePath: string;
   filename: string;
   size: number;
+  storage?: "imagekit" | "local";
+  fileId?: string | null;
+  storageWarning?: string;
   attachmentFilename?: string;
   extractedText?: string;
   suggestedRole?: string;
@@ -59,6 +62,54 @@ export type RecipientReportRow = {
   attempts: number;
   lastError: string | null;
   sentAt: string | null;
+};
+
+export type MailStatusFilter = "ALL" | "SENT" | "PENDING" | "FAILED";
+
+export type MailSortOption = "newest" | "oldest" | "recently_sent" | "company";
+
+export type MailRow = {
+  id: string;
+  name: string;
+  companyName: string;
+  hrEmail: string;
+  hrName: string;
+  status: "PENDING" | "SENT" | "FAILED";
+  emailSent: boolean;
+  attempts: number;
+  lastError: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  campaign: {
+    id: string;
+    name: string;
+    subject: string;
+    status: string;
+  };
+};
+
+export type MailCampaignOption = {
+  id: string;
+  name: string;
+  status: string;
+  recipientCount: number;
+  isSending: boolean;
+};
+
+export type MailListResponse = {
+  mails: MailRow[];
+  counts: {
+    total: number;
+    sent: number;
+    failed: number;
+    pending: number;
+  };
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalFiltered: number;
+  campaigns: MailCampaignOption[];
+  hasActiveSending: boolean;
 };
 
 export type CampaignStatusResponse = {

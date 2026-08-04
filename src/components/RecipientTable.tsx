@@ -52,7 +52,7 @@ export function RecipientTable({ recipients }: RecipientTableProps) {
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Company</th>
               <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Sent flag</th>
+          
               <th className="px-3 py-2">Status</th>
               <th className="px-3 py-2">Attempts</th>
               <th className="px-3 py-2">Sent at</th>
@@ -65,15 +65,7 @@ export function RecipientTable({ recipients }: RecipientTableProps) {
                 <td className="px-3 py-2 font-medium text-slate-950">{recipient.name}</td>
                 <td className="px-3 py-2 text-slate-700">{recipient.companyName}</td>
                 <td className="px-3 py-2 text-slate-700">{recipient.hrEmail}</td>
-                <td className="px-3 py-2">
-                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
-                    recipient.emailSent
-                      ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                      : "bg-slate-100 text-slate-700 ring-slate-200"
-                  }`}>
-                    {recipient.emailSent ? "Sent" : "Not sent"}
-                  </span>
-                </td>
+            
                 <td className="px-3 py-2">
                   <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ring-1 ${statusClass(recipient.status)}`}>
                     {recipient.status}
