@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -23,7 +24,6 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return NextResponse.json({ campaignId: campaign.id, status: campaign.status });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update campaign.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiErrorResponse(error, { fallback: "Unable to update campaign." });
   }
 }

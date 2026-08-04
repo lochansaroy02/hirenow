@@ -11,7 +11,22 @@ type CsvUploaderProps = {
 export function CsvUploader({ value, onParsed }: CsvUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [error, setError] = useState("");
+
+  async function readJsonResponse(response: Response) {
+    const text = await response.text();
+
+    try {
+      return JSON.parse(text) as CsvUploadResult & { error?: string };
+    } catch {
+      const fallback = text.trim().slice(0, 300);
+      return {
+        error: fallback || `Import failed with HTTP ${response.status}.`,
+      };
+    }
+  }
 
   async function handleFile(file: File | undefined) {
     if (!file) {
@@ -20,6 +35,29 @@ export function CsvUploader({ value, onParsed }: CsvUploaderProps) {
 
     setError("");
     setIsUploading(true);
+    setProgress(8);
+    setProgressLabel("Uploading file...");
+
+    const progressTimer = window.setInterval(() => {
+      setProgress((current) => {
+        if (current < 35) {
+          setProgressLabel("Uploading file...");
+          return current + 4;
+        }
+
+        if (current < 72) {
+          setProgressLabel("Parsing spreadsheet...");
+          return current + 2;
+        }
+
+        if (current < 92) {
+          setProgressLabel("Saving contacts to database...");
+          return current + 1;
+        }
+
+        return current;
+      });
+    }, 450);
 
     try {
       const formData = new FormData();
@@ -29,16 +67,19 @@ export function CsvUploader({ value, onParsed }: CsvUploaderProps) {
         method: "POST",
         body: formData,
       });
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "CSV upload failed.");
+        throw new Error(payload.error ?? "Import failed.");
       }
 
+      setProgress(100);
+      setProgressLabel("Import complete.");
       onParsed(payload as CsvUploadResult);
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "CSV upload failed.");
+      setError(uploadError instanceof Error ? uploadError.message : "Import failed.");
     } finally {
+      window.clearInterval(progressTimer);
       setIsUploading(false);
     }
   }
@@ -70,7 +111,23 @@ export function CsvUploader({ value, onParsed }: CsvUploaderProps) {
         onChange={(event) => void handleFile(event.target.files?.[0])}
       />
 
-      {isUploading ? <p className="mt-4 text-sm text-slate-600">Importing contacts...</p> : null}
+      {isUploading ? (
+        <div className="mt-5 rounded-md border border-teal-200 bg-teal-50 p-4">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-teal-900">{progressLabel || "Importing contacts..."}</span>
+            <span className="text-teal-800">{progress}%</span>
+          </div>
+          <div className="mt-3 h-3 overflow-hidden rounded-full bg-teal-100">
+            <div
+              className="h-full rounded-full bg-teal-600 transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-teal-800">
+            Large Excel files can take a bit while HireNow parses rows and writes contacts to Prisma.
+          </p>
+        </div>
+      ) : null}
       {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
       {value ? (

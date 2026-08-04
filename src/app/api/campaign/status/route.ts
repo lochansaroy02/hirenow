@@ -1,5 +1,6 @@
 import { RecipientStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { getEffectiveCap, getTodayKey, isCampaignRunning } from "@/lib/sender";
 import { prisma } from "@/lib/prisma";
 
@@ -93,7 +94,6 @@ export async function GET(request: Request) {
       needsResume: campaign.status === "ACTIVE" && !isRunning && pending > 0,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load campaign status.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiErrorResponse(error, { fallback: "Unable to load campaign status." });
   }
 }

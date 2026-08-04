@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -24,7 +25,7 @@ export async function GET() {
         updatedAt: contact.updatedAt.toISOString(),
       })),
     });
-  } catch {
-    return NextResponse.json({ error: "Unable to load saved contacts." }, { status: 500 });
+  } catch (error) {
+    return apiErrorResponse(error, { fallback: "Unable to load saved contacts." });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 import type { CsvRecipientRow } from "@/types/campaign";
 
@@ -105,7 +106,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ campaignId: campaign.id });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Campaign creation failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiErrorResponse(error, { fallback: "Campaign creation failed." });
   }
 }

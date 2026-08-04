@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { startCampaignJob } from "@/lib/sender";
 
 export const runtime = "nodejs";
@@ -15,7 +16,6 @@ export async function POST(request: Request) {
     const result = await startCampaignJob(campaignId);
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to start sending.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiErrorResponse(error, { fallback: "Unable to start sending." });
   }
 }
