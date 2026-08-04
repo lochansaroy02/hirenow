@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CAMPAIGN_DRAFT_STORAGE_KEY } from "@/lib/storageKeys";
+import { useCallback, useEffect, useState } from "react";
+import { CAMPAIGN_DRAFT_STORAGE_KEY, INSTRUCTIONS_SEEN_STORAGE_KEY } from "@/lib/storageKeys";
 import type { CampaignDraft, CsvUploadResult, ResumeUploadResult, SavedContact } from "@/types/campaign";
 import { CsvUploader } from "@/components/CsvUploader";
+import { InstructionsModal } from "@/components/InstructionsModal";
 import { ResumeUploader } from "@/components/ResumeUploader";
 
 function contactsToCsvResult(contacts: SavedContact[]): CsvUploadResult {
@@ -29,6 +30,23 @@ function contactsToCsvResult(contacts: SavedContact[]): CsvUploadResult {
 export function HomeFlow() {
   const [draft, setDraft] = useState<CampaignDraft>({});
   const [savedContactsCount, setSavedContactsCount] = useState(0);
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+
+  // Read after mount so the server and client render the same first pass.
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (!window.localStorage.getItem(INSTRUCTIONS_SEEN_STORAGE_KEY)) {
+        setIsInstructionsOpen(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  const closeInstructions = useCallback(() => {
+    setIsInstructionsOpen(false);
+    window.localStorage.setItem(INSTRUCTIONS_SEEN_STORAGE_KEY, "true");
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -83,13 +101,24 @@ export function HomeFlow() {
             Saved contacts in database: {savedContactsCount}
           </p>
         </div>
-        <Link
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          href="/dashboard"
-        >
-          Mail dashboard
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            onClick={() => setIsInstructionsOpen(true)}
+          >
+            Setup guide
+          </button>
+          <Link
+            className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            href="/dashboard"
+          >
+            Mail dashboard
+          </Link>
+        </div>
       </header>
+
+      <InstructionsModal open={isInstructionsOpen} onClose={closeInstructions} />
 
       <CsvUploader value={draft.csv} onParsed={handleCsv} />
       <ResumeUploader value={draft.resume} onUploaded={handleResume} />
