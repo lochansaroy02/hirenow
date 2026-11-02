@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecipientStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model Campaign {
+  id               String         @id @default(uuid())
+  name             String         @default("Untitled Campaign")
+  subject          String
+  body             String
+  resumePath       String
+  dailyLimit       Int            @default(500)
+  safetyPercent    Int            @default(80)
+  delayMinSec      Int            @default(8)
+  delayMaxSec      Int            @default(20)
+  batchSize        Int            @default(50)
+  batchCooldownMin Int            @default(30)
+  status           String         @default("DRAFT") // DRAFT | ACTIVE | PAUSED | COMPLETED
+  // Why the sender paused this campaign on its own (Gmail login rejected, daily
+  // limit hit). Cleared when sending starts again.
+  pausedReason     String?
+  // The user whose Gmail account sends this campaign. Null for campaigns created
+  // before per-user Gmail; the first user to start one becomes its owner.
+  userId           String?
+  user             User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  recipients       Recipient[]
+  sendLogs         DailySendLog[]
+}
+
+model Recipient {
+  id            String          @id @default(uuid())
+  campaignId    String
+  campaign      Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name          String
+  companyName   String
+  hrEmail       String
+  hrName        String
+  emailSent     Boolean         @default(false)
+  status        RecipientStatus @default(PENDING)
+  attempts      Int             @default(0)
+  lastError     String?
+  // Earliest time a transient failure may be retried; null means "now".
+  nextAttemptAt DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime        @default(now())
+
+  @@index([campaignId, status])
+  @@index([campaignId, emailSent])
+  // Backs the "has this address already been emailed, in any campaign?" lookup
+  // the sender runs before every send.
+  @@index([hrEmail, status])
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  name        String
+  companyName String
+  hrEmail     String   @unique
+  hrName      String
+  sourceFile  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyName])
+}
+
+enum SendState {
+  SENDING // reserved before the SMTP call; treated as sent if never confirmed
+  SENT
+}
+
+/// A permanent record that an address was emailed. Recipient rows are deleted once
+/// their mail goes out, so this is the only lasting proof of who has been contacted
+/// and is what cross-campaign duplicate protection reads. Deliberately has no foreign
+/// key to Campaign: deleting a campaign must never erase the fact that someone was
+/// already emailed.
+model SentEmail {
+  id            String    @id @default(uuid())
+  hrEmail       String // stored lowercased
+  // The Gmail address that sent it, lowercased. Duplicate protection is per sending
+  // account. "" marks history from before per-user Gmail; it blocks every account.
+  senderEmail   String    @default("")
+  state         SendState @default(SENT)
+  hrName        String?
+  companyName   String?
+  recipientName String?
+  campaignId    String?
+  campaignName  String?
+  sentAt        DateTime  @default(now())
+
+  @@unique([senderEmail, hrEmail])
+  @@index([hrEmail])
+  @@index([sentAt])
+}
+
+/// A reusable email template. Also stores the sender's own contact details, since
+/// those are merged into the body at compose time and would otherwise be retyped
+/// for every campaign.
+model EmailTemplate {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  subject     String
+  body        String
+  senderEmail String?
+  senderPhone String?
+  linkedinUrl String?
+  githubUrl   String?
+  isDefault   Boolean   @default(false)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([lastUsedAt])
+}
+
+/// A resume already uploaded to storage, kept so it can be reused across campaigns
+/// without uploading the PDF again. resumePath is the ImageKit URL (or a local path
+/// for uploads made before ImageKit was configured).
+model SavedResume {
+  id                 String    @id @default(uuid())
+  label              String
+  resumePath         String    @unique
+  attachmentFilename String
+  originalFilename   String
+  fileSize           Int
+  storage            String    @default("imagekit")
+  fileId             String?
+  suggestedRole      String?
+  detectedSkills     String[]
+  isDefault          Boolean   @default(false)
+  lastUsedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([lastUsedAt])
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+/// An account that can sign in. Passwords are stored only as a bcrypt hash.
+model User {
+  id                  String     @id @default(uuid())
+  email               String     @unique // stored lowercased
+  name                String
+  passwordHash        String
+  role                Role       @default(USER)
+  isActive            Boolean    @default(true)
+  lastLoginAt         DateTime?
+  // Embedded in session tokens. Bumping it signs the user out everywhere.
+  tokenVersion        Int        @default(0)
+  // The user's own Gmail account, used to send their campaigns. The App Password
+  // is stored encrypted (see src/lib/secrets.ts), never in plain text.
+  gmailAddress        String?
+  gmailAppPasswordEnc String?
+  senderName          String?
+  gmailVerifiedAt     DateTime?
+  campaigns           Campaign[]
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([role])
+}
+
+model DailySendLog {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  date       String // YYYY-MM-DD
+  countSent  Int      @default(0)
+
+  @@unique([campaignId, date])
+}
+
+/// Sends per day per Gmail account, across every campaign. Gmail's daily limit belongs
+/// to the account, not to a campaign, so this is the counter the cap is enforced
+/// against. Purges never touch it, so deleting history cannot reset today's count.
+model SenderDailyLog {
+  sender    String @default("") // Gmail address, lowercased; "" is pre-per-user history
+  date      String // YYYY-MM-DD
+  countSent Int    @default(0)
+
+  @@id([sender, date])
+}

@@ -1,0 +1,15 @@
+{
+  "prisma.pinToPrisma6": true,
+  "workbench.colorCustomizations": {
+    "[Actual Xcode Dark Theme]": {},
+    "[Default Dark Modern]": {
+      "tab.activeBorderTop": "#00FF00",
+      "tab.unfocusedActiveBorderTop": "#00FF0088",
+      "textCodeBlock.background": "#00000055"
+    },
+    "editor.wordHighlightStrongBorder": "#FF6347",
+    "editor.wordHighlightBorder": "#FFD700",
+    "editor.selectionHighlightBorder": "#A9A9A9"
+  },
+  "WillLuke.nextjs.hasPrompted": true
+}
